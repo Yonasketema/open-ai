@@ -9,11 +9,12 @@ const rl = readline.createInterface({
 const newMessage = async (history, message) => {
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
-    message: [...history, message],
+    messages: [...history, message],
     temperature: 0,
   });
 
-  return response.choices[0].message;
+  console.log(response);
+  return response.choices.at(0).message;
 };
 
 const formatMessage = (userInput) => ({ role: "user", content: userInput });
