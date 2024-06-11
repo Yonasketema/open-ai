@@ -1,3 +1,7 @@
+/**
+ * > node tool_function.js "evaluate sin(45 deg) ^ 2"
+ */
+
 import { openai } from "./openai.js";
 import { evaluate } from "mathjs";
 
@@ -54,8 +58,6 @@ while (true) {
     console.log(response.choices[0].message.content);
     break;
   }
-
-  console.log(messages);
 
   const response_message = response.choices[0].message;
 
