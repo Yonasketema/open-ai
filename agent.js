@@ -5,14 +5,41 @@ function mathCalculator(expression) {
   return `the result ${evaluate(expression)}`;
 }
 
+// if a given data is out of context window
+
+// scraper ->  vector - rag - send question data
+
+//wiki - vector - Rag- answer
+
 function WebSearch(url) {
-  return "adwa took place in ethiopia at 1888";
+  return "win a bet";
 }
 
 function Wikipedia(q) {
   const searchTerm = q;
 
-  return "win a bet";
+  // const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&list=search&srsearch=${encodeURIComponent(
+  //   searchTerm
+  // )}`;
+
+  // fetch(url)
+  //   .then((response) => response.json())
+  //   .then((data) => {
+  //     const results = data.query.search;
+  //     results.forEach((result) => {
+  //       const title = result.title;
+  //       const snippet = result.snippet;
+
+  //       console.log(`Title: ${title}`);
+  //       console.log(`Snippet: ${snippet}`);
+  //       console.log("---");
+  //     });
+  //   })
+  //   .catch((error) => {
+  //     console.error("Error:", error);
+  //   });
+
+  return "adwa took place in ethiopia at 1888";
 }
 
 const available_functions = {
@@ -36,9 +63,6 @@ const messages = [
   {
     role: "system",
     content: `
-
-
-
     You run in a loop of Thought, Task , Action , Action Output
     At the end of the loop you output an Answer
     Use Thought to describe your thoughts about the question you have been asked.
@@ -62,9 +86,6 @@ const messages = [
     Search on a given search query and return the answer from Wikipedia
 
 
-    Always search on a given URL first and give the answer . but if you don't get an answer search 
-    Wikipedia 
-
     Example 1:
 
     Question: who is the last king of ethiopia?
@@ -78,6 +99,9 @@ const messages = [
     Thought: I now know the final answer
 
     Answer: the last king of ethiopia is hhhh
+
+    Always search on a given URL first and give the answer . but if you don't get an answer search 
+    Wikipedia 
 
     Example 2:
 
@@ -105,6 +129,7 @@ const messages = [
   {
     role: "user",
     content: `QUESTION: ${QUESTION} 
+              Thought:{agent_scratchpad}
                          
   `,
   },
@@ -112,7 +137,7 @@ const messages = [
 
 const getCompletion = async (messages) => {
   const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo-0613",
+    model: "gpt-3.5-turbo",
     temperature: 0,
     messages,
     tool_choice: "auto",
@@ -177,7 +202,7 @@ const getCompletion = async (messages) => {
 let response;
 
 // New
-// console.log(`QUESTION: ${QUESTION} `);
+console.log(`QUESTION: ${QUESTION} `);
 while (true) {
   response = await getCompletion(messages);
   const response_message = response.choices[0].message;
@@ -203,11 +228,10 @@ while (true) {
 
       console.log(`Action Input: ${JSON.stringify(function_args)} `);
 
-      // messages.
-
       const function_response = function_to_call(
         function_args[function_to_call_args]
       );
+
       console.log(`Action Output: ${function_response} `);
 
       messages.push({
