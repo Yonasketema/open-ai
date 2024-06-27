@@ -1,45 +1,28 @@
 import { openai } from "./openai.js";
 import { evaluate } from "mathjs";
+import { PuppeteerWebBaseLoader } from "@langchain/community/document_loaders/web/puppeteer";
+import colors from "colors";
 
 function mathCalculator(expression) {
   return `the result ${evaluate(expression)}`;
 }
 
-// if a given data is out of context window
+async function WebSearch(url) {
+  const loader = new PuppeteerWebBaseLoader(url);
 
-// scraper ->  vector - rag - send question data
+  const docs = await loader.load()[0].pageContent;
 
-//wiki - vector - Rag- answer
-
-function WebSearch(url) {
-  return "win a bet";
+  return docs;
 }
 
-function Wikipedia(q) {
-  const searchTerm = q;
+async function Wikipedia(q) {
+  const loader = new PuppeteerWebBaseLoader(
+    `https://en.wikipedia.org/wiki/${q}`
+  );
 
-  // const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&list=search&srsearch=${encodeURIComponent(
-  //   searchTerm
-  // )}`;
+  const docs = (await loader.load())[0].pageContent;
 
-  // fetch(url)
-  //   .then((response) => response.json())
-  //   .then((data) => {
-  //     const results = data.query.search;
-  //     results.forEach((result) => {
-  //       const title = result.title;
-  //       const snippet = result.snippet;
-
-  //       console.log(`Title: ${title}`);
-  //       console.log(`Snippet: ${snippet}`);
-  //       console.log("---");
-  //     });
-  //   })
-  //   .catch((error) => {
-  //     console.error("Error:", error);
-  //   });
-
-  return "adwa took place in ethiopia at 1888";
+  return docs;
 }
 
 const available_functions = {
@@ -63,183 +46,178 @@ const messages = [
   {
     role: "system",
     content: `
-    You run in a loop of Thought, Task , Action , Action Output
-    At the end of the loop you output an Answer
+    You run in a loop of Thought, Task , Action , Action Output.
+    At the end of the loop you output an Answer to the original input question.
     Use Thought to describe your thoughts about the question you have been asked.
-    use Task to describe what do you do to answer the question in the step 
+    use Task to describe what you need to do to answer the question in this step.
     Use Action to run one of the tool available to you .
     use Action Output will be the result of running those actions.
+    After the Action is run you  will be called again with Action Output.
 
-      
     Your available tool are:
 
-    mathCalculator:
-    e.g. calculate  4 * 7 / 3
-    Runs a calculation and returns the number 
-
-    WebSearch:
-    e.g search https://yonask.com
-    search and return a summary from searching a given URL
-
-    Wikipedia:
-    e.g. search to find information about adwa
-    Search on a given search query and return the answer from Wikipedia
-
+    WebSearch: A search engine. Useful for when you have a url to answer questions. Input should be a URL.
+    mathCalculator: Useful for when you need to answer questions about math.
+    Wikipedia: Useful for when you need to answer general questions about people, places, companies, facts, historical events, or other subjects. Input should be a search query.
+ 
 
     Example 1:
 
-    Question: who is the last king of ethiopia?
-    Thought: to find the last king of ethiopia i should search on wikipedia
-    Task: Search on wikipedia  
-    Action: wikipedia [ethiopia]
+    Question:  who is the last king of ethiopia?
+    Thought: To find the last king of Ethiopia, I should search on Wikipedia.
+    Task: Search on wikipedia. 
+    Action: Wikipedia [last king of Ethiopia].
+    Action Output: The last king of Ethiopia is Haile Selassie I.
+    Thought: I now know the Answer.
 
-    You will be called again with this:
+    Answer: The last king of Ethiopia is Haile Selassie I.
 
-    Action Output: the last king of ethiopia is hhhh
-    Thought: I now know the final answer
-
-    Answer: the last king of ethiopia is hhhh
-
-    Always search on a given URL first and give the answer . but if you don't get an answer search 
-    Wikipedia 
+    You are first required to search on a given URL (if provided) and only if the URL doesn’t yield an answer, proceed to search on Wikipedia.
 
     Example 2:
 
-    Question: who is the marathon runner  won the gold  with bear foot ? http://nasa.com
-    Thought: to find the athlete i need to search  on http://nasa.com.
-    Task: Search on http://nasa.com  
-    Action: WebSearch [http://nasa.com]  
+    Question: who is the marathon runner who won the gold barefoot http://nasa.com ?
+    Thought:To find the athlete, I need to search on http://nasa.com.
+    Task: Search on http://nasa.com. 
+    Action: WebSearch [http://nasa.com].  
+    Action Output: Mars is the neighboring planet to Earth.
+    Thought: Because I didn’t get any info to answer the question from the given URL, I need to search on Wikipedia.
+    Task: Search on wikipedia. 
+    Action:  Wikipedia [won marathon barefoot].
+    Action Output: The Ethiopian athlete Abebe Bikila won a marathon barefoot in 1960 at the Rome Olympics.
+    Thought: I now know the  Answer.
 
-    You will be called again with this:
-
-    Action Output: mar is the neighbor planet for earth
-    Thought: because of i don't get any info to answer the question from a given url . I need to search on wikipedia.
-    Task: Search on wikipedia 
-    Action: wikipedia [won marathon with bear foot] 
-
-    You will be called again with this:
-
-    Action Output: the Ethiopian athlete abebe bekila won a marathon  with his bear foot in 1968 at rome olympic
-    Thought: I now know the final answer
-  
-    Answer:  the marathon athlete who won with his bear foot is abebe bekila
+    Answer: The marathon athlete who won barefoot is Abebe Bikila.
     
     `,
   },
   {
     role: "user",
     content: `QUESTION: ${QUESTION} 
-              Thought:{agent_scratchpad}
+              Thought:
                          
   `,
   },
 ];
 
 const getCompletion = async (messages) => {
-  const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    temperature: 0,
-    messages,
-    tool_choice: "auto",
-    tools: [
-      {
-        type: "function",
-        function: {
-          name: "mathCalculator",
-          description: "Run a math expression",
-          parameters: {
-            type: "object",
-            properties: {
-              expression: {
-                type: "string",
-                description:
-                  "Then math expression to evaluate like '2 * 3 + (21 / 2) ^ 2'",
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      temperature: 0,
+      messages,
+      tool_choice: "auto",
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "mathCalculator",
+            description: "Run a math expression",
+            parameters: {
+              type: "object",
+              properties: {
+                expression: {
+                  type: "string",
+                  description:
+                    "Then math expression to evaluate like '2 * 3 + (21 / 2) ^ 2'",
+                },
               },
+              required: ["expression"],
             },
-            required: ["expression"],
           },
         },
-      },
-      {
-        type: "function",
-        function: {
-          name: "WebSearch",
-          description: "search on a given URL",
-          parameters: {
-            type: "object",
-            properties: {
-              url: {
-                type: "string",
-                description: "the url used to search on web ",
+        {
+          type: "function",
+          function: {
+            name: "WebSearch",
+            description: "search on a given URL",
+            parameters: {
+              type: "object",
+              properties: {
+                url: {
+                  type: "string",
+                  description: "the url used to search on web ",
+                },
               },
+              required: ["url"],
             },
-            required: ["url"],
           },
         },
-      },
-      {
-        type: "function",
-        function: {
-          name: "Wikipedia",
-          description: "search on a given URL",
-          parameters: {
-            type: "object",
-            properties: {
-              search_query: {
-                type: "string",
-                description: "the search_query used to search on Wikipedia",
+        {
+          type: "function",
+          function: {
+            name: "Wikipedia",
+            description: "search on a given URL",
+            parameters: {
+              type: "object",
+              properties: {
+                search_query: {
+                  type: "string",
+                  description: "the search_query used to search on Wikipedia",
+                },
               },
+              required: ["search_query"],
             },
-            required: ["search_query"],
           },
         },
-      },
-    ],
-  });
-  return response;
+      ],
+    });
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.log(colors.cyan(messages));
+  }
 };
 
 let response;
 
-// New
-console.log(`QUESTION: ${QUESTION} `);
+console.log(colors.blue(colors.bold(`QUESTION: ${QUESTION} `)));
 while (true) {
   response = await getCompletion(messages);
   const response_message = response.choices[0].message;
 
-  console.log(response_message.content);
-
-  messages.push(response_message);
+  console.log(`${colors.green(colors.bold(response_message.content))}`);
 
   if (response.choices[0].finish_reason === "stop") {
-    console.log(response_message.content);
-    // console.log(messages);
+    console.log(`${colors.green(colors.bold(response_message.content))}`);
+
     break;
   }
 
   const tool_calls = response_message.tool_calls;
 
+  messages.push(response_message);
+
   if (tool_calls) {
-    tool_calls.forEach((tool_call) => {
-      const function_name = tool_call.function.name;
-      const function_args = JSON.parse(tool_call.function.arguments);
-      const function_to_call = available_functions[function_name].function;
-      const function_to_call_args = available_functions[function_name].args[0];
+    await Promise.all(
+      tool_calls.map(async (tool_call) => {
+        const function_name = tool_call.function.name;
+        const function_args = JSON.parse(tool_call.function.arguments);
+        const function_to_call = available_functions[function_name].function;
+        const function_to_call_args =
+          available_functions[function_name].args[0];
 
-      console.log(`Action Input: ${JSON.stringify(function_args)} `);
+        console.log(
+          `${colors.green(
+            colors.bold(`Action Input: ${JSON.stringify(function_args)}`)
+          )}`
+        );
 
-      const function_response = function_to_call(
-        function_args[function_to_call_args]
-      );
+        const function_response = await function_to_call(
+          function_args[function_to_call_args]
+        );
 
-      console.log(`Action Output: ${function_response} `);
+        console.log(
+          `${colors.green(colors.bold(`Action Output: ${function_response}`))}`
+        );
 
-      messages.push({
-        tool_call_id: tool_call.id,
-        role: "tool",
-        name: function_name,
-        content: `Action Output: ${function_response}`,
-      });
-    });
+        messages.push({
+          tool_call_id: tool_call.id,
+          role: "tool",
+          name: function_name,
+          content: `Action Output: ${function_response}`,
+        });
+      })
+    );
   }
 }
