@@ -10,7 +10,7 @@ function mathCalculator(expression) {
 async function WebSearch(url) {
   const loader = new PuppeteerWebBaseLoader(url);
 
-  const docs = await loader.load()[0].pageContent;
+  const docs = await loader.scrape();
 
   return docs;
 }
@@ -20,8 +20,7 @@ async function Wikipedia(q) {
     `https://en.wikipedia.org/wiki/${q}`
   );
 
-  const docs = (await loader.load())[0].pageContent;
-
+  const docs = await loader.scrape();
   return docs;
 }
 
