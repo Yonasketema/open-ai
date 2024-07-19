@@ -1,5 +1,6 @@
-import { openai } from "./openai.js";
+import colors from "colors";
 import readline from "readline";
+import { openai } from "./openai.js";
 
 const rl = readline.createInterface({
   output: process.stdout,
@@ -13,7 +14,7 @@ const newMessage = async (history, message) => {
     temperature: 0,
   });
 
-  console.log(response);
+  // console.log(response);
   return response.choices.at(0).message;
 };
 
@@ -35,7 +36,9 @@ const chat = () => {
       const response = await newMessage(history, userMessage);
 
       history.push(userMessage, response);
-      console.log(`\n\nAI: ${response.content}\n\n`);
+      console.log(
+        `${colors.green(colors.bold(`\n\nAI: ${response.content}\n\n`))}`
+      );
       start();
     });
   };
