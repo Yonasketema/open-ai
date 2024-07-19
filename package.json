@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@langchain/community": "^0.2.13",
+    "chromadb": "^1.8.1",
     "colors": "^1.4.0",
     "dotenv": "^16.4.5",
     "mathjs": "^13.0.0",
