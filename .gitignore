@@ -2,3 +2,5 @@
 .env
 node_modules
 *.txt
+chroma.log
+chroma_data/
