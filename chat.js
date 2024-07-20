@@ -26,7 +26,7 @@ const chat = () => {
   ];
 
   const start = () => {
-    rl.question("> You: ", async (userInput) => {
+    rl.question(colors.bold("> You: "), async (userInput) => {
       if (userInput.toLowerCase() === "exit") {
         rl.close();
         return;
@@ -37,7 +37,7 @@ const chat = () => {
 
       history.push(userMessage, response);
       console.log(
-        `${colors.green(colors.bold(`\n\nAI: ${response.content}\n\n`))}`
+        `${colors.green(colors.bold(`\nAI: ${response.content}\n`))}`
       );
       start();
     });
@@ -46,5 +46,7 @@ const chat = () => {
   start();
 };
 
-console.log("ChatBot . Type 'exit' to end the chat.");
+console.log(
+  `${colors.blue(colors.bold("ChatBot . Type 'exit' to end the chat. \n"))}`
+);
 chat();
